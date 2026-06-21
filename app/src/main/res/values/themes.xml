@@ -1,0 +1,8 @@
+<resources>
+    <!-- Light launch theme. The night-qualified copy in values-night/ swaps to the dark
+         parent + background so there is no white flash before Compose draws in dark mode.
+         (A single framework DayNight parent needs API 29; minSdk here is 26.) -->
+    <style name="Theme.NotifVault" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
+</resources>

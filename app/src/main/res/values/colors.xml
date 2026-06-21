@@ -1,0 +1,4 @@
+<resources>
+    <!-- Mist (matches the light Compose background in ui/theme/Color.kt) -->
+    <color name="window_background">#FFF1F5F9</color>
+</resources>
