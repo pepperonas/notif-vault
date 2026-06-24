@@ -14,16 +14,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -107,15 +113,33 @@ private fun LockScreen(onAuthenticate: () -> Unit) {
 @Composable
 private fun AppNav(vm: VaultViewModel) {
     val nav = rememberNavController()
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-    val start = if (PermissionUtils.hasNotificationAccess(context)) "home" else "onboarding"
+    // Permission/battery state is granted in system Settings, i.e. outside the app.
+    // Re-read it on every ON_RESUME so returning from Settings reflects the new state
+    // immediately — without this the user had to fully kill and relaunch the app.
+    var hasAccess by remember { mutableStateOf(PermissionUtils.hasNotificationAccess(context)) }
+    var batteryOptimized by remember { mutableStateOf(PermissionUtils.isIgnoringBatteryOptimizations(context)) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasAccess = PermissionUtils.hasNotificationAccess(context)
+                batteryOptimized = PermissionUtils.isIgnoringBatteryOptimizations(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    // Start destination is decided once, on first composition.
+    val start = remember { if (PermissionUtils.hasNotificationAccess(context)) "home" else "onboarding" }
 
     NavHost(navController = nav, startDestination = start) {
         composable("onboarding") {
             OnboardingScreen(
-                hasAccess = PermissionUtils.hasNotificationAccess(context),
-                batteryOptimized = PermissionUtils.isIgnoringBatteryOptimizations(context),
+                hasAccess = hasAccess,
+                batteryOptimized = batteryOptimized,
                 onGrantAccess = { PermissionUtils.openNotificationAccessSettings(context) },
                 onBattery = { PermissionUtils.requestIgnoreBatteryOptimizations(context) },
                 onContinue = { nav.navigate("home") { popUpTo("onboarding") { inclusive = true } } }
