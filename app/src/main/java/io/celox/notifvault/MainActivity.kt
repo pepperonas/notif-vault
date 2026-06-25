@@ -62,6 +62,17 @@ class MainActivity : FragmentActivity() {
                     // rememberSaveable so a config change (rotation) doesn't re-lock the app.
                     var unlocked by rememberSaveable { mutableStateOf(false) }
 
+                    // Re-lock when the app leaves the foreground — a lock that only ever asks
+                    // once (and then stays open until the process dies) protects nothing.
+                    val lockLifecycle = LocalLifecycleOwner.current
+                    DisposableEffect(lockLifecycle, biometricOn) {
+                        val observer = LifecycleEventObserver { _, event ->
+                            if (biometricOn && event == Lifecycle.Event.ON_STOP) unlocked = false
+                        }
+                        lockLifecycle.lifecycle.addObserver(observer)
+                        onDispose { lockLifecycle.lifecycle.removeObserver(observer) }
+                    }
+
                     if (biometricOn && !unlocked) {
                         LockScreen(onAuthenticate = { promptBiometric { unlocked = true } })
                     } else {

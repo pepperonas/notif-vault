@@ -9,15 +9,18 @@ import io.celox.notifvault.data.DatabaseProvider
 import io.celox.notifvault.data.MessageDao
 import io.celox.notifvault.data.SettingsStore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class VaultViewModel(app: Application) : AndroidViewModel(app) {
 
     private val dao: MessageDao = DatabaseProvider.get(app).messageDao()
@@ -32,10 +35,19 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
     private val query = MutableStateFlow("")
 
     val searchResults: StateFlow<List<CapturedMessage>> = query
-        .flatMapLatest { q -> if (q.isBlank()) flowOf(emptyList()) else dao.search(q) }
+        .debounce(180)                 // don't hit the DB on every keystroke
+        .distinctUntilChanged()
+        .flatMapLatest { q ->
+            if (q.isBlank()) flowOf(emptyList()) else dao.search(escapeLike(q.trim()))
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun setQuery(q: String) { query.value = q }
+
+    // Escape LIKE metacharacters so a literal % or _ in the query isn't treated as a wildcard
+    // (paired with ESCAPE '\' in MessageDao.search).
+    private fun escapeLike(q: String): String =
+        q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
     fun messagesFor(conversation: String, pkg: String) =
         dao.messagesFor(conversation, pkg)

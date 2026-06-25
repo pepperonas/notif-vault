@@ -43,12 +43,14 @@ interface MessageDao {
     )
     fun messagesFor(conversation: String, pkg: String): Flow<List<CapturedMessage>>
 
+    // ESCAPE '\' so % and _ typed by the user match literally
+    // (the ViewModel backslash-escapes them before calling this).
     @Query(
         """
         SELECT * FROM messages
-        WHERE text LIKE '%' || :q || '%'
-           OR sender LIKE '%' || :q || '%'
-           OR conversation LIKE '%' || :q || '%'
+        WHERE text LIKE '%' || :q || '%' ESCAPE '\'
+           OR sender LIKE '%' || :q || '%' ESCAPE '\'
+           OR conversation LIKE '%' || :q || '%' ESCAPE '\'
         ORDER BY messageTime DESC
         LIMIT 500
         """
