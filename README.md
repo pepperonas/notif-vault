@@ -69,14 +69,25 @@ NotifVault parst sie sofort (bevorzugt über `MessagingStyle`, das Absender + ec
 Zeitstempel jeder Einzelnachricht enthält) und speichert sie ab. Mehrfach gelieferte
 Nachrichten werden über einen Inhalts-Hash dedupliziert.
 
+**Korrekte Chat-Zuordnung:** Nachrichten werden über einen *stabilen* Chat-Schlüssel
+(`conversationKey` aus `shortcutId` → `tag` → Titel) gruppiert, nicht über den
+Anzeigenamen. Der ist bei 1:1-Chats oft leer und bei Gruppen manchmal nicht gesetzt –
+würde man danach gruppieren, zerfielen Gruppen pro Absender bzw. vermischten sich mit
+gleichnamigen Einzelchats. So landet jeder Kontakt/jede Gruppe verlässlich in genau
+einem Verlauf. Die Übersicht zeigt pro Chat den **neuesten Titel** + letzte Nachricht;
+der Verlauf rendert als Chat-Ansicht mit Datumstrennern, Sprecher-Gruppierung und
+farbigen Absendern.
+
 ## Was geht – und was nicht
 
 | Funktion | Status |
 |---|---|
 | Text-Nachrichten (1:1 & Gruppen) | ✅ zuverlässig |
 | Absender + echter Zeitstempel | ✅ via MessagingStyle |
-| Volltextsuche, Export (CSV/JSON) | ✅ |
-| Verschlüsselung (SQLCipher/AES-256), Biometrie-Sperre | ✅ |
+| Korrekte Chat-Gruppierung (stabiler `conversationKey`) | ✅ |
+| Chat-Ansicht: Datumstrenner, Sprecher-Gruppierung, Avatare | ✅ |
+| Volltextsuche (mit Treffer-Hervorhebung), Export (CSV/JSON) | ✅ |
+| Verschlüsselung (SQLCipher/AES-256), Biometrie-Sperre (re-lockt im Hintergrund) | ✅ |
 | **Medien** (Fotos, Sprach-/Videonachrichten) | ❌ technisch nicht möglich – stecken nicht in der Notification, Scoped Storage sperrt WhatsApps Medienordner |
 | Stummgeschaltete Chats | ❌ erzeugen oft keine Benachrichtigung |
 | Nachrichten empfangen, während der Chat offen ist | ❌ keine Benachrichtigung |
@@ -89,6 +100,18 @@ Nachrichten werden über einen Inhalts-Hash dedupliziert.
 
 Oder per Terminal: `./gradlew assembleDebug` → APK unter `app/build/outputs/apk/debug/`.
 (Eine `local.properties` mit `sdk.dir=...` wird von Android Studio automatisch angelegt.)
+
+### Tests
+
+Reine JVM-Unit-Tests (kein Emulator nötig):
+
+```bash
+./gradlew testDebugUnitTest
+```
+
+Abgedeckt: Dedup-Schlüssel (`messageContentId`, mit fixem SHA-256-Anker), CSV-/JSON-Export-Escaping
+(`ExportUtils`), Datums-/Zeit- und Identitäts-Helfer (`Format`) sowie das LIKE-Escaping der Suche
+(`SearchUtils`).
 
 ## Einrichtung auf dem Samsung S24 Ultra (wichtig)
 
@@ -112,12 +135,15 @@ One UI killt Hintergrunddienste sehr aggressiv. Damit kein Mitschnitt verloren g
 ## Projektstruktur
 
 ```
-data/    CapturedMessage (Entity), MessageDao, AppDatabase,
+data/    CapturedMessage (Entity, mit conversationKey), MessageDao, AppDatabase,
          DatabaseProvider (SQLCipher), SettingsStore (DataStore)
 notif/   MessageExtractor – Notification → CapturedMessage(s)
+         MessageId – stabiler Dedup-Inhalts-Hash (messageContentId)
 service/ NotificationCaptureService – der Listener
-ui/      Compose-Screens (Onboarding, Home, Conversation, Settings) + ViewModel
-util/    PermissionUtils, ExportUtils
+ui/      Compose-Screens (Onboarding, Home, Conversation, Settings) + ViewModel,
+         Components (Avatar), Format (Datum/Zeit, Farben, Initialen)
+util/    PermissionUtils, ExportUtils, SearchUtils (LIKE-Escaping)
+src/test JUnit-Unit-Tests (MessageId, ExportUtils, Format, SearchUtils)
 ```
 
 ## Release erstellen (Maintainer)

@@ -18,11 +18,12 @@ Single Gradle module (`:app`), Kotlin + Jetpack Compose, minSdk 26 / target+comp
 ./gradlew assembleDebug        # APK → app/build/outputs/apk/debug/
 ./gradlew installDebug         # build + install to connected device/emulator
 ./gradlew lint                 # Android lint
-./gradlew test                 # JVM unit tests (none exist yet)
+./gradlew testDebugUnitTest    # JVM unit tests (MessageId, ExportUtils, Format, SearchUtils)
 ```
 
 There is **no `local.properties`** committed — Android Studio creates it, or copy `local.properties.example`
-and set `sdk.dir`. There is **no git repo** here yet.
+and set `sdk.dir`. The repo is `github.com/pepperonas/notif-vault` (public); signed release APKs are built by
+`.github/workflows/release.yml` on a `v*` tag (keystore secrets live only in the private `pepperonas/keystore`).
 
 ## Architecture (data flow)
 
@@ -38,30 +39,41 @@ The whole app is one pipeline: a system notification → a stored, encrypted row
 2. **`notif/MessageExtractor`** — converts one notification into 0..N `CapturedMessage`s. Skips
    `FLAG_GROUP_SUMMARY`. **Prefers `NotificationCompat.MessagingStyle`** (gives per-message sender + real
    timestamp + bundled back-history); falls back to title/`EXTRA_TEXT_LINES`/`EXTRA_TEXT`. Flags
-   suspected-deletion text via `deletionMarkers`.
+   suspected-deletion text via `deletionMarkers`. **Derives a stable `conversationKey`** for grouping —
+   `notification.shortcutId` → `sbn.tag` → display title — because the title (`conversationTitle`) is null
+   for most 1:1 WhatsApp chats and sometimes missing for groups; grouping by title mixed distinct chats and
+   split groups per-sender. The title is display-only.
 
 3. **De-duplication is the key invariant.** `CapturedMessage.id` is a SHA-256 of
-   `"$pkg|$conversation|$sender|$text|$time"`, and inserts use `OnConflictStrategy.IGNORE`. The same message
-   re-delivered inside many successive notifications therefore collapses to exactly one row. Preserve this —
-   changing the hash inputs or conflict strategy breaks dedup.
+   `"$pkg|$conversationKey|$sender|$text|$messageTime"` — computed by `messageContentId(...)` in
+   `notif/MessageId.kt` (extracted as a framework-free, unit-tested seam; see `MessageIdTest`, which pins the
+   exact field order/separator with a fixed hash). Inserts use `OnConflictStrategy.IGNORE`, so a message
+   re-delivered inside many successive notifications collapses to exactly one row. Don't change the hash
+   inputs or conflict strategy — it silently re-duplicates the vault.
 
-4. **`data/`** — Room (`AppDatabase` v1, single `messages` table) over **SQLCipher**. `DatabaseProvider` is a
-   singleton that loads the native `sqlcipher` lib, builds the DB with a 32-byte random passphrase stored in
-   `EncryptedSharedPreferences` (AES-256-GCM, Android Keystore). Uses `fallbackToDestructiveMigration()` —
-   if you bump the schema version without a migration, **all archived messages are wiped**; add a real
-   migration instead. `MessageDao` exposes Flows for conversation summaries, per-chat messages, search, and
-   count. `SettingsStore` (DataStore Preferences) holds the monitored-package set, capture-all flag, and
-   biometric-lock flag; `KNOWN_MESSENGERS` is the toggle list shown in Settings, `DEFAULT_PACKAGES` is the
-   WhatsApp default.
+4. **`data/`** — Room (`AppDatabase` **v2**, single `messages` table) over **SQLCipher**. `DatabaseProvider`
+   is a singleton that loads the native `sqlcipher` lib, builds the DB with a 32-byte random passphrase stored
+   in `EncryptedSharedPreferences` (AES-256-GCM, Android Keystore). Uses `fallbackToDestructiveMigration()`
+   with **no registered migration on purpose** — v2 added `conversationKey`, and since the old rows were
+   grouped by the unreliable title we took a clean slate. If you bump the schema again and want to keep data,
+   add a real `Migration`. `MessageDao` groups/filters by **`conversationKey`** (the overview's bare columns
+   resolve to the `MAX(messageTime)` row → latest title + last message). `SettingsStore` (DataStore) holds the
+   monitored-package set, capture-all flag, and biometric-lock flag; `KNOWN_MESSENGERS` is the Settings toggle
+   list, `DEFAULT_PACKAGES` the WhatsApp default.
 
 5. **`ui/`** — Compose. `MainActivity` is a **`FragmentActivity`** (required by `BiometricPrompt`); it gates
-   the app behind biometric/device-credential unlock when enabled, then a `NavHost` routes
-   onboarding → home → chat → settings. Nav args (conversation title, package) are `URLEncoder`-escaped.
-   `VaultViewModel` (`AndroidViewModel`) owns the DAO Flows as `StateFlow`s and the search query. Theme in
-   `ui/theme/`.
+   the app behind biometric/device-credential unlock when enabled (and **re-locks on `ON_STOP`**), then a
+   `NavHost` routes onboarding → home → chat → settings. Nav args are the `URLEncoder`-escaped
+   **`conversationKey` + package** (not the title; the chat screen derives the title from its latest message).
+   `ConversationScreen` renders a chat archive (date separators, sender-run grouping, per-sender colors via
+   `Format.identityColor`); `HomeScreen` shows colored `Avatar`s + search with match highlighting; destructive
+   actions (delete chat / clear all) require confirmation dialogs. `VaultViewModel` (`AndroidViewModel`) owns
+   the DAO Flows as `StateFlow`s and the **debounced** search query. Shared bits: `Components.kt` (`Avatar`),
+   `Format.kt` (date/time, `identityColor`, `initials`). Theme in `ui/theme/`.
 
 6. **`util/`** — `PermissionUtils` (notification-access check via `enabled_notification_listeners`, battery-
-   optimization exemption) and `ExportUtils` (hand-rolled CSV/JSON serialization).
+   optimization exemption), `ExportUtils` (hand-rolled CSV/JSON serialization), and `SearchUtils.escapeLike`
+   (escapes LIKE `%`/`_`, paired with `ESCAPE '\'` in `MessageDao.search`; unit-tested).
 
 `NotifVaultApp` (Application) warms up `DatabaseProvider` at startup so the listener can write immediately.
 
