@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/banner.png" alt="NotifVault – messages never die" width="100%">
+</p>
+
 # NotifVault
 
 [![Release](https://img.shields.io/github/v/release/pepperonas/notif-vault)](https://github.com/pepperonas/notif-vault/releases/latest)
