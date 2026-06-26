@@ -31,6 +31,8 @@ object DatabaseProvider {
 
         return Room.databaseBuilder(context, AppDatabase::class.java, "vault.db")
             .openHelperFactory(factory)
+            // No migration registered for 1→2: intentionally start the new, correctly-grouped
+            // schema from a clean slate (old rows were grouped by the unreliable title).
             .fallbackToDestructiveMigration()
             .build()
     }

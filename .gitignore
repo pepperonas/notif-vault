@@ -13,3 +13,6 @@
 *.jks
 *.keystore
 keystore.properties
+
+# Kotlin compiler artifacts
+.kotlin/

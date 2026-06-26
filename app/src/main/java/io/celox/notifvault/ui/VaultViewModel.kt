@@ -8,6 +8,7 @@ import io.celox.notifvault.data.ConversationSummary
 import io.celox.notifvault.data.DatabaseProvider
 import io.celox.notifvault.data.MessageDao
 import io.celox.notifvault.data.SettingsStore
+import io.celox.notifvault.util.escapeLike
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,16 +45,11 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setQuery(q: String) { query.value = q }
 
-    // Escape LIKE metacharacters so a literal % or _ in the query isn't treated as a wildcard
-    // (paired with ESCAPE '\' in MessageDao.search).
-    private fun escapeLike(q: String): String =
-        q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    fun messagesFor(conversationKey: String, pkg: String) =
+        dao.messagesFor(conversationKey, pkg)
 
-    fun messagesFor(conversation: String, pkg: String) =
-        dao.messagesFor(conversation, pkg)
-
-    fun deleteConversation(conversation: String, pkg: String) = viewModelScope.launch {
-        dao.deleteConversation(conversation, pkg)
+    fun deleteConversation(conversationKey: String, pkg: String) = viewModelScope.launch {
+        dao.deleteConversation(conversationKey, pkg)
     }
 
     fun clearAll() = viewModelScope.launch { dao.clear() }

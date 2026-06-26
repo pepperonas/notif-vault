@@ -71,21 +71,23 @@ private fun buildChatItems(messages: List<CapturedMessage>): List<ChatItem> {
 @Composable
 fun ConversationScreen(
     vm: VaultViewModel,
-    conversation: String,
+    conversationKey: String,
     pkg: String,
     onBack: () -> Unit
 ) {
     // remember keyed by chat so the Flow isn't rebuilt (and the collection reset) on every recomposition.
-    val messages by remember(conversation, pkg) { vm.messagesFor(conversation, pkg) }
+    val messages by remember(conversationKey, pkg) { vm.messagesFor(conversationKey, pkg) }
         .collectAsStateWithLifecycle(initialValue = emptyList())
 
+    // The chat's display title is the latest title we captured for it (it can change over time).
+    val title = messages.lastOrNull()?.conversation ?: ""
     val chatItems = remember(messages) { buildChatItems(messages) }
     val listState = rememberLazyListState()
     var confirmDelete by remember { mutableStateOf(false) }
 
     // Open at the newest message (chat convention), but only once the data first arrives —
     // so we don't yank the user back to the bottom while they scroll through history.
-    var initialized by remember(conversation, pkg) { mutableStateOf(false) }
+    var initialized by remember(conversationKey, pkg) { mutableStateOf(false) }
     LaunchedEffect(chatItems.size) {
         if (!initialized && chatItems.isNotEmpty()) {
             listState.scrollToItem(chatItems.lastIndex)
@@ -98,7 +100,7 @@ fun ConversationScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text(conversation, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                        Text(title, fontWeight = FontWeight.SemiBold, maxLines = 1)
                         Text(
                             "${messages.size} Nachricht${if (messages.size == 1) "" else "en"}",
                             style = MaterialTheme.typography.labelSmall,
@@ -148,13 +150,13 @@ fun ConversationScreen(
             onDismissRequest = { confirmDelete = false },
             title = { Text("Chat löschen?") },
             text = {
-                Text("Alle ${messages.size} gespeicherten Nachrichten aus „$conversation\" " +
+                Text("Alle ${messages.size} gespeicherten Nachrichten aus „$title\" " +
                     "werden unwiderruflich gelöscht.")
             },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDelete = false
-                    vm.deleteConversation(conversation, pkg)
+                    vm.deleteConversation(conversationKey, pkg)
                     onBack()
                 }) { Text("Löschen") }
             },

@@ -86,8 +86,8 @@ fun HomeScreen(
                 query.isNotBlank() -> SearchResults(query, results, onOpenConversation)
                 conversations.isEmpty() -> EmptyState(total)
                 else -> LazyColumn(Modifier.fillMaxSize()) {
-                    items(conversations, key = { it.conversation + it.packageName }) { c ->
-                        ConversationRow(c) { onOpenConversation(c.conversation, c.packageName) }
+                    items(conversations, key = { it.conversationKey + it.packageName }) { c ->
+                        ConversationRow(c) { onOpenConversation(c.conversationKey, c.packageName) }
                         HorizontalDivider(
                             Modifier.padding(start = 76.dp),
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
@@ -127,7 +127,7 @@ private fun SearchResults(
             )
         }
         items(results, key = { it.id }) { m ->
-            SearchResultRow(m, query) { onOpen(m.conversation, m.packageName) }
+            SearchResultRow(m, query) { onOpen(m.conversationKey, m.packageName) }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
         }
     }

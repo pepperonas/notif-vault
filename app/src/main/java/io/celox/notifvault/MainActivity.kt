@@ -159,16 +159,16 @@ private fun AppNav(vm: VaultViewModel) {
         composable("home") {
             HomeScreen(
                 vm = vm,
-                onOpenConversation = { conv, pkg ->
-                    nav.navigate("chat/${enc(conv)}/${enc(pkg)}")
+                onOpenConversation = { key, pkg ->
+                    nav.navigate("chat/${enc(key)}/${enc(pkg)}")
                 },
                 onOpenSettings = { nav.navigate("settings") }
             )
         }
-        composable("chat/{conv}/{pkg}") { entry ->
+        composable("chat/{key}/{pkg}") { entry ->
             ConversationScreen(
                 vm = vm,
-                conversation = dec(entry.arguments?.getString("conv")),
+                conversationKey = dec(entry.arguments?.getString("key")),
                 pkg = dec(entry.arguments?.getString("pkg")),
                 onBack = { nav.popBackStack() }
             )

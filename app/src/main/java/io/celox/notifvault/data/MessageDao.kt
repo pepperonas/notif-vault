@@ -8,7 +8,8 @@ import kotlinx.coroutines.flow.Flow
 
 /** Lightweight projection for the conversation overview list. */
 data class ConversationSummary(
-    val conversation: String,
+    val conversationKey: String,
+    val conversation: String,   // latest title for this chat
     val packageName: String,
     val appLabel: String,
     val isGroup: Boolean,
@@ -23,12 +24,15 @@ interface MessageDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(messages: List<CapturedMessage>): List<Long>
 
+    // Group by the stable conversationKey. The bare columns (conversation, appLabel, isGroup,
+    // text) resolve to the row holding MAX(messageTime) — SQLite's documented min/max-bare-column
+    // behaviour — so the overview shows each chat's latest title and last message.
     @Query(
         """
-        SELECT conversation, packageName, appLabel, isGroup,
+        SELECT conversationKey, conversation, packageName, appLabel, isGroup,
                text AS lastText, MAX(messageTime) AS lastTime, COUNT(*) AS messageCount
         FROM messages
-        GROUP BY conversation, packageName
+        GROUP BY conversationKey, packageName
         ORDER BY lastTime DESC
         """
     )
@@ -37,11 +41,11 @@ interface MessageDao {
     @Query(
         """
         SELECT * FROM messages
-        WHERE conversation = :conversation AND packageName = :pkg
+        WHERE conversationKey = :conversationKey AND packageName = :pkg
         ORDER BY messageTime ASC
         """
     )
-    fun messagesFor(conversation: String, pkg: String): Flow<List<CapturedMessage>>
+    fun messagesFor(conversationKey: String, pkg: String): Flow<List<CapturedMessage>>
 
     // ESCAPE '\' so % and _ typed by the user match literally
     // (the ViewModel backslash-escapes them before calling this).
@@ -66,6 +70,6 @@ interface MessageDao {
     @Query("DELETE FROM messages")
     suspend fun clear()
 
-    @Query("DELETE FROM messages WHERE conversation = :conversation AND packageName = :pkg")
-    suspend fun deleteConversation(conversation: String, pkg: String)
+    @Query("DELETE FROM messages WHERE conversationKey = :conversationKey AND packageName = :pkg")
+    suspend fun deleteConversation(conversationKey: String, pkg: String)
 }
