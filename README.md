@@ -4,9 +4,51 @@
 
 # NotifVault
 
-[![Release](https://img.shields.io/github/v/release/pepperonas/notif-vault)](https://github.com/pepperonas/notif-vault/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/pepperonas/notif-vault/total)](https://github.com/pepperonas/notif-vault/releases)
-[![Build](https://img.shields.io/github/actions/workflow/status/pepperonas/notif-vault/release.yml)](https://github.com/pepperonas/notif-vault/actions/workflows/release.yml)
+<!-- Project status -->
+<p align="center">
+  <a href="https://github.com/pepperonas/notif-vault/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/pepperonas/notif-vault?logo=github&color=14B8A6"></a>
+  <a href="https://github.com/pepperonas/notif-vault/releases/latest"><img alt="Release date" src="https://img.shields.io/github/release-date/pepperonas/notif-vault?color=14B8A6"></a>
+  <a href="https://github.com/pepperonas/notif-vault/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/pepperonas/notif-vault/total?logo=github&label=downloads&color=0D9488"></a>
+  <a href="https://github.com/pepperonas/notif-vault/releases/latest"><img alt="Latest downloads" src="https://img.shields.io/github/downloads/pepperonas/notif-vault/latest/total?label=latest%20downloads&color=0D9488"></a>
+  <a href="https://github.com/pepperonas/notif-vault/actions/workflows/release.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/pepperonas/notif-vault/release.yml?logo=githubactions&logoColor=white&label=release%20build"></a>
+</p>
+<p align="center">
+  <a href="https://github.com/pepperonas/notif-vault/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/pepperonas/notif-vault?logo=git&logoColor=white&color=F59E0B"></a>
+  <a href="https://github.com/pepperonas/notif-vault/commits/main"><img alt="Commit activity" src="https://img.shields.io/github/commit-activity/m/pepperonas/notif-vault?color=F59E0B"></a>
+  <a href="https://github.com/pepperonas/notif-vault/issues"><img alt="Issues" src="https://img.shields.io/github/issues/pepperonas/notif-vault?logo=github"></a>
+  <img alt="Code size" src="https://img.shields.io/github/languages/code-size/pepperonas/notif-vault?color=0F172A">
+  <img alt="Repo size" src="https://img.shields.io/github/repo-size/pepperonas/notif-vault?color=0F172A">
+  <img alt="Top language" src="https://img.shields.io/github/languages/top/pepperonas/notif-vault?logo=kotlin&logoColor=white&color=7F52FF">
+</p>
+
+<!-- Tech stack -->
+<p align="center">
+  <img alt="Platform" src="https://img.shields.io/badge/platform-Android-3DDC84?logo=android&logoColor=white">
+  <img alt="minSdk" src="https://img.shields.io/badge/minSdk-26%20(Android%208.0)-3DDC84?logo=android&logoColor=white">
+  <img alt="targetSdk" src="https://img.shields.io/badge/targetSdk-35-3DDC84?logo=android&logoColor=white">
+  <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-2.0.21-7F52FF?logo=kotlin&logoColor=white">
+  <img alt="Jetpack Compose" src="https://img.shields.io/badge/Jetpack%20Compose-BOM%202024.10-4285F4?logo=jetpackcompose&logoColor=white">
+  <img alt="Material 3" src="https://img.shields.io/badge/Material%203-Expressive-757575?logo=materialdesign&logoColor=white">
+</p>
+<p align="center">
+  <img alt="Gradle" src="https://img.shields.io/badge/Gradle-8.11.1-02303A?logo=gradle&logoColor=white">
+  <img alt="AGP" src="https://img.shields.io/badge/AGP-8.7.2-3DDC84?logo=android&logoColor=white">
+  <img alt="KSP" src="https://img.shields.io/badge/KSP-2.0.21--1.0.28-7F52FF?logo=kotlin&logoColor=white">
+  <img alt="JDK" src="https://img.shields.io/badge/JDK-17-007396?logo=openjdk&logoColor=white">
+  <img alt="Coroutines" src="https://img.shields.io/badge/Coroutines-1.9.0-7F52FF?logo=kotlin&logoColor=white">
+</p>
+
+<!-- Data & privacy -->
+<p align="center">
+  <img alt="Room" src="https://img.shields.io/badge/Room-2.6.1-FF6F00?logo=sqlite&logoColor=white">
+  <img alt="SQLCipher" src="https://img.shields.io/badge/SQLCipher-4.6.1-1BA1E2">
+  <img alt="Encryption" src="https://img.shields.io/badge/encryption-AES--256-success?logo=letsencrypt&logoColor=white">
+  <img alt="Biometric lock" src="https://img.shields.io/badge/lock-Biometric-blueviolet">
+  <img alt="On-device" src="https://img.shields.io/badge/data-100%25%20on--device-14B8A6">
+  <img alt="No network" src="https://img.shields.io/badge/network-none-critical">
+  <img alt="License" src="https://img.shields.io/badge/license-Proprietary-lightgrey">
+  <img alt="Made by celox.io" src="https://img.shields.io/badge/made%20by-celox.io-0D9488">
+</p>
 
 Speichert eingehende Nachrichten-Benachrichtigungen **dauerhaft und verschlüsselt** – wie
 der Samsung-Benachrichtigungsverlauf, aber ohne 24-Stunden-Verfall. Gelöschte WhatsApp-
