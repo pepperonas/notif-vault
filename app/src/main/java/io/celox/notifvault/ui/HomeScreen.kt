@@ -62,7 +62,7 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("NotifVault") },
+                title = { Text("Kleene Petze") },
                 actions = {
                     IconButton(onClick = onOpenSettings) {
                         Icon(Icons.Default.Settings, "Einstellungen")

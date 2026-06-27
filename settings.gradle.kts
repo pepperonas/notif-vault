@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "NotifVault"
+rootProject.name = "KleenePetze"
 include(":app")

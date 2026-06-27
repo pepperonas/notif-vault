@@ -40,7 +40,7 @@ fun OnboardingScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Spacer(Modifier.height(24.dp))
-        Text("NotifVault", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+        Text("Kleene Petze", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
         Text(
             "Speichert eingehende Nachrichten-Benachrichtigungen dauerhaft und verschlüsselt – auch wenn der Absender sie später löscht.",
             style = MaterialTheme.typography.bodyMedium
@@ -49,7 +49,7 @@ fun OnboardingScreen(
         StepCard(
             icon = Icons.Default.NotificationsActive,
             title = "Benachrichtigungszugriff",
-            body = "Erlaube den Zugriff, damit NotifVault eingehende Nachrichten mitlesen und sichern kann.",
+            body = "Erlaube den Zugriff, damit Kleene Petze eingehende Nachrichten mitlesen und sichern kann.",
             done = hasAccess
         ) { Button(onClick = onGrantAccess) { Text(if (hasAccess) "Erneut öffnen" else "Zugriff erteilen") } }
 

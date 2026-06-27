@@ -96,7 +96,7 @@ class MainActivity : FragmentActivity() {
             })
         prompt.authenticate(
             BiometricPrompt.PromptInfo.Builder()
-                .setTitle("NotifVault entsperren")
+                .setTitle("Kleene Petze entsperren")
                 .setAllowedAuthenticators(
                     BiometricManager.Authenticators.BIOMETRIC_WEAK or BiometricManager.Authenticators.DEVICE_CREDENTIAL
                 )
@@ -115,7 +115,7 @@ private fun LockScreen(onAuthenticate: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("🔒 NotifVault ist gesperrt", style = MaterialTheme.typography.headlineSmall)
+            Text("🔒 Kleene Petze ist gesperrt", style = MaterialTheme.typography.headlineSmall)
             Button(onClick = onAuthenticate) { Text("Entsperren") }
         }
     }

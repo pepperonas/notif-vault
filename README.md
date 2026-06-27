@@ -1,24 +1,24 @@
 <p align="center">
-  <img src="docs/banner.png" alt="NotifVault – messages never die" width="100%">
+  <img src="docs/banner.png" alt="Kleene Petze – messages never die" width="100%">
 </p>
 
-# NotifVault
+# Kleene Petze
 
 <!-- Project status -->
 <p align="center">
-  <a href="https://github.com/pepperonas/notif-vault/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/pepperonas/notif-vault?logo=github&color=14B8A6"></a>
-  <a href="https://github.com/pepperonas/notif-vault/releases/latest"><img alt="Release date" src="https://img.shields.io/github/release-date/pepperonas/notif-vault?color=14B8A6"></a>
-  <a href="https://github.com/pepperonas/notif-vault/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/pepperonas/notif-vault/total?logo=github&label=downloads&color=0D9488"></a>
-  <a href="https://github.com/pepperonas/notif-vault/releases/latest"><img alt="Latest downloads" src="https://img.shields.io/github/downloads/pepperonas/notif-vault/latest/total?label=latest%20downloads&color=0D9488"></a>
-  <a href="https://github.com/pepperonas/notif-vault/actions/workflows/release.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/pepperonas/notif-vault/release.yml?logo=githubactions&logoColor=white&label=release%20build"></a>
+  <a href="https://github.com/pepperonas/kleene-petze/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/pepperonas/kleene-petze?logo=github&color=14B8A6"></a>
+  <a href="https://github.com/pepperonas/kleene-petze/releases/latest"><img alt="Release date" src="https://img.shields.io/github/release-date/pepperonas/kleene-petze?color=14B8A6"></a>
+  <a href="https://github.com/pepperonas/kleene-petze/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/pepperonas/kleene-petze/total?logo=github&label=downloads&color=0D9488"></a>
+  <a href="https://github.com/pepperonas/kleene-petze/releases/latest"><img alt="Latest downloads" src="https://img.shields.io/github/downloads/pepperonas/kleene-petze/latest/total?label=latest%20downloads&color=0D9488"></a>
+  <a href="https://github.com/pepperonas/kleene-petze/actions/workflows/release.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/pepperonas/kleene-petze/release.yml?logo=githubactions&logoColor=white&label=release%20build"></a>
 </p>
 <p align="center">
-  <a href="https://github.com/pepperonas/notif-vault/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/pepperonas/notif-vault?logo=git&logoColor=white&color=F59E0B"></a>
-  <a href="https://github.com/pepperonas/notif-vault/commits/main"><img alt="Commit activity" src="https://img.shields.io/github/commit-activity/m/pepperonas/notif-vault?color=F59E0B"></a>
-  <a href="https://github.com/pepperonas/notif-vault/issues"><img alt="Issues" src="https://img.shields.io/github/issues/pepperonas/notif-vault?logo=github"></a>
-  <img alt="Code size" src="https://img.shields.io/github/languages/code-size/pepperonas/notif-vault?color=0F172A">
-  <img alt="Repo size" src="https://img.shields.io/github/repo-size/pepperonas/notif-vault?color=0F172A">
-  <img alt="Top language" src="https://img.shields.io/github/languages/top/pepperonas/notif-vault?logo=kotlin&logoColor=white&color=7F52FF">
+  <a href="https://github.com/pepperonas/kleene-petze/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/pepperonas/kleene-petze?logo=git&logoColor=white&color=F59E0B"></a>
+  <a href="https://github.com/pepperonas/kleene-petze/commits/main"><img alt="Commit activity" src="https://img.shields.io/github/commit-activity/m/pepperonas/kleene-petze?color=F59E0B"></a>
+  <a href="https://github.com/pepperonas/kleene-petze/issues"><img alt="Issues" src="https://img.shields.io/github/issues/pepperonas/kleene-petze?logo=github"></a>
+  <img alt="Code size" src="https://img.shields.io/github/languages/code-size/pepperonas/kleene-petze?color=0F172A">
+  <img alt="Repo size" src="https://img.shields.io/github/repo-size/pepperonas/kleene-petze?color=0F172A">
+  <img alt="Top language" src="https://img.shields.io/github/languages/top/pepperonas/kleene-petze?logo=kotlin&logoColor=white&color=7F52FF">
 </p>
 
 <!-- Tech stack -->
@@ -57,7 +57,7 @@ verschlüsselte Datenbank geschrieben wird, sobald sie ankommt.
 
 ## Download
 
-Die fertige, signierte APK gibt es unter **[Releases](https://github.com/pepperonas/notif-vault/releases/latest)**.
+Die fertige, signierte APK gibt es unter **[Releases](https://github.com/pepperonas/kleene-petze/releases/latest)**.
 APK herunterladen → auf dem Gerät öffnen → Installation aus unbekannter Quelle erlauben.
 
 ## Wie es funktioniert
@@ -65,7 +65,7 @@ APK herunterladen → auf dem Gerät öffnen → Installation aus unbekannter Qu
 Android liefert jede Benachrichtigung an einen `NotificationListenerService`
 (`service/NotificationCaptureService.kt`). WhatsApp sendet beim Löschen einer Nachricht
 **keine** zweite Benachrichtigung – die Originalnachricht ist also längst angekommen.
-NotifVault parst sie sofort (bevorzugt über `MessagingStyle`, das Absender + echten
+Kleene Petze parst sie sofort (bevorzugt über `MessagingStyle`, das Absender + echten
 Zeitstempel jeder Einzelnachricht enthält) und speichert sie ab. Mehrfach gelieferte
 Nachrichten werden über einen Inhalts-Hash dedupliziert.
 
@@ -118,10 +118,10 @@ Abgedeckt: Dedup-Schlüssel (`messageContentId`, mit fixem SHA-256-Anker), CSV-/
 One UI killt Hintergrunddienste sehr aggressiv. Damit kein Mitschnitt verloren geht:
 
 1. **Benachrichtigungszugriff erteilen** – beim ersten Start, oder
-   *Einstellungen → Apps → Spezieller Zugriff → Benachrichtigungszugriff → NotifVault*.
+   *Einstellungen → Apps → Spezieller Zugriff → Benachrichtigungszugriff → Kleene Petze*.
 2. **Akku-Optimierung ausnehmen** – im Onboarding-Schritt, oder
-   *Einstellungen → Akku → Hintergrundnutzungslimits → „Nie in den Standby" → NotifVault hinzufügen*.
-3. Optional: in *Einstellungen → Apps → NotifVault* die Option „Im Hintergrund aktiv lassen".
+   *Einstellungen → Akku → Hintergrundnutzungslimits → „Nie in den Standby" → Kleene Petze hinzufügen*.
+3. Optional: in *Einstellungen → Apps → Kleene Petze* die Option „Im Hintergrund aktiv lassen".
 
 ## Datenschutz / DSGVO
 

@@ -179,7 +179,7 @@ private suspend fun export(
     // (starting an Activity from a background thread is unreliable on some OEMs).
     val uri = withContext(Dispatchers.IO) {
         val dir = File(context.cacheDir, "exports").apply { mkdirs() }
-        val file = File(dir, "notifvault_export.$ext")
+        val file = File(dir, "kleene-petze_export.$ext")
         file.writeText(content)
         FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
     }

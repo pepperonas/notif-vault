@@ -4,8 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-NotifVault is an Android app (`io.celox.notifvault`) that permanently and encryptedly archives incoming
-messaging notifications — like Samsung's notification history but without the 24h expiry. Its core trick:
+Kleene Petze (display name; package/`applicationId` stay `io.celox.notifvault`, including the `NotifVaultApp`
+/ `NotifVaultTheme` internal names — renaming them would break update-installs, signing and stored data) is
+an Android app that permanently and encryptedly archives incoming messaging notifications — like Samsung's
+notification history but without the 24h expiry. Its core trick:
 WhatsApp sends **no** notification when a message is deleted, so the original notification (already captured
 on arrival) survives deletion. Everything is on-device; the app has **no `INTERNET` permission**, no cloud,
 no tracking, and backups are disabled (`allowBackup="false"`).
@@ -22,7 +24,7 @@ Single Gradle module (`:app`), Kotlin + Jetpack Compose, minSdk 26 / target+comp
 ```
 
 There is **no `local.properties`** committed — Android Studio creates it, or copy `local.properties.example`
-and set `sdk.dir`. The repo is `github.com/pepperonas/notif-vault` (public); signed release APKs are built by
+and set `sdk.dir`. The repo is `github.com/pepperonas/kleene-petze` (public); signed release APKs are built by
 `.github/workflows/release.yml` on a `v*` tag (keystore secrets live only in the private `pepperonas/keystore`).
 
 ## Architecture (data flow)
