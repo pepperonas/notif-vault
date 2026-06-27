@@ -202,6 +202,10 @@ private fun ConversationRow(c: ConversationSummary, onClick: () -> Unit) {
                     modifier = Modifier.weight(1f)
                 )
                 Spacer(Modifier.width(8.dp))
+                if (c.deletedCount > 0) {
+                    DeletedBadge(c.deletedCount)
+                    Spacer(Modifier.width(6.dp))
+                }
                 CountBadge(c.messageCount)
             }
             Text(
@@ -210,6 +214,22 @@ private fun ConversationRow(c: ConversationSummary, onClick: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
         }
+    }
+}
+
+@Composable
+private fun DeletedBadge(count: Int) {
+    Surface(
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        shape = MaterialTheme.shapes.extraLarge
+    ) {
+        Text(
+            "🗑 $count",
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+        )
     }
 }
 

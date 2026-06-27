@@ -88,7 +88,9 @@ farbigen Absendern.
 | Chat-Ansicht: Datumstrenner, Sprecher-Gruppierung, Avatare | ✅ |
 | Volltextsuche (mit Treffer-Hervorhebung), Export (CSV/JSON) | ✅ |
 | Verschlüsselung (SQLCipher/AES-256), Biometrie-Sperre (re-lockt im Hintergrund) | ✅ |
+| **Gelöschte Nachrichten markieren** (Original hervorgehoben + 🗑-Badge in der Übersicht) | ⚠️ nur wenn die Nachricht gelöscht wird, *während sie noch ungelesen im Benachrichtigungs-Shade liegt* (dann ersetzt WhatsApp den Text durch „…gelöscht", den wir der gespeicherten Originalnachricht zuordnen) |
 | **Medien** (Fotos, Sprach-/Videonachrichten) | ❌ technisch nicht möglich – stecken nicht in der Notification, Scoped Storage sperrt WhatsApps Medienordner |
+| Bereits gelesene Nachrichten, die später gelöscht werden | ❌ erzeugen keine Benachrichtigung → Löschung nicht erkennbar |
 | Stummgeschaltete Chats | ❌ erzeugen oft keine Benachrichtigung |
 | Nachrichten empfangen, während der Chat offen ist | ❌ keine Benachrichtigung |
 

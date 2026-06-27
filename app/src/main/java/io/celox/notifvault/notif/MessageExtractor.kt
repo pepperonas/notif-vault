@@ -6,8 +6,16 @@ import android.service.notification.StatusBarNotification
 import androidx.core.app.NotificationCompat
 import io.celox.notifvault.data.CapturedMessage
 
+/** Identifies a previously-stored original message that has since been deleted. */
+data class DeletionMark(val conversationKey: String, val sender: String, val messageTime: Long)
+
+/** Normal messages to store + deletions to apply to already-stored originals. */
+data class ExtractResult(val messages: List<CapturedMessage>, val deletions: List<DeletionMark>) {
+    companion object { val EMPTY = ExtractResult(emptyList(), emptyList()) }
+}
+
 /**
- * Converts a posted notification into zero or more [CapturedMessage]s.
+ * Converts a posted notification into messages to store and/or deletions to apply.
  *
  * Strategy:
  *  1. Skip the group-summary notification ("5 new messages from 3 chats") to avoid noise.
@@ -18,19 +26,19 @@ import io.celox.notifvault.data.CapturedMessage
  *
  * The de-dup key is a content hash, so the same message arriving inside many subsequent
  * notifications collapses to one stored row.
+ *
+ * **Deletion handling:** when a still-unread message is deleted, WhatsApp re-posts the
+ * notification with that message's text replaced by a "deleted" placeholder — but the
+ * sender and original timestamp are preserved. We don't store the placeholder; instead we
+ * emit a [DeletionMark] so the already-stored original (same key + sender + time) can be
+ * flagged. Messages deleted *after* being read produce no notification at all and are
+ * therefore undetectable — a hard platform limit.
  */
 class MessageExtractor(private val pm: PackageManager) {
 
-    private val deletionMarkers = listOf(
-        "this message was deleted",
-        "diese nachricht wurde gelöscht",
-        "you deleted this message",
-        "du hast diese nachricht gelöscht"
-    )
-
-    fun extract(sbn: StatusBarNotification): List<CapturedMessage> {
-        val n = sbn.notification ?: return emptyList()
-        if (n.flags and Notification.FLAG_GROUP_SUMMARY != 0) return emptyList()
+    fun extract(sbn: StatusBarNotification): ExtractResult {
+        val n = sbn.notification ?: return ExtractResult.EMPTY
+        if (n.flags and Notification.FLAG_GROUP_SUMMARY != 0) return ExtractResult.EMPTY
 
         val pkg = sbn.packageName
         val appLabel = labelFor(pkg)
@@ -40,7 +48,9 @@ class MessageExtractor(private val pm: PackageManager) {
         // or, failing that, its tag (the chat's JID) — is constant for that chat.
         val stableKey = runCatching { n.shortcutId }.getOrNull()?.takeIf { it.isNotBlank() }
             ?: sbn.tag?.takeIf { it.isNotBlank() }
-        val out = mutableListOf<CapturedMessage>()
+
+        val messages = mutableListOf<CapturedMessage>()
+        val deletions = mutableListOf<DeletionMark>()
 
         val style = runCatching {
             NotificationCompat.MessagingStyle.extractMessagingStyleFromNotification(n)
@@ -52,60 +62,63 @@ class MessageExtractor(private val pm: PackageManager) {
             for (m in style.messages) {
                 val text = m.text?.toString()?.trim().orEmpty()
                 if (text.isEmpty()) continue
-                val sender = m.person?.name?.toString()
-                    ?: style.user.name?.toString()
-                    ?: "Unbekannt"
+                val sender = (m.person?.name?.toString() ?: style.user.name?.toString() ?: "Unbekannt")
+                    .ifBlank { "Unbekannt" }
                 // Title for display: group name if present, else the 1:1 contact (the sender).
-                val title = convTitle ?: sender
+                val title = (convTitle ?: sender).ifBlank { appLabel }
                 // Group key: stable id if we have one, else fall back to the title (legacy behavior).
-                val key = stableKey ?: title
+                val key = (stableKey ?: title).ifBlank { appLabel }
                 val time = if (m.timestamp > 0) m.timestamp else sbn.postTime
-                out += build(pkg, appLabel, key, title, sender, isGroup, text, time, now)
+
+                if (isDeletionPlaceholder(text)) {
+                    deletions += DeletionMark(key, sender, time)
+                } else {
+                    messages += message(pkg, appLabel, key, title, sender, isGroup, text, time, now)
+                }
             }
         } else {
             val extras = n.extras
-            val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()?.trim()
+            val titleRaw = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()?.trim()
             val lines = extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)
             val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()?.trim()
-            val convTitle = title?.takeIf { it.isNotEmpty() } ?: appLabel
-            val key = stableKey ?: convTitle
+            val title = (titleRaw?.takeIf { it.isNotEmpty() } ?: appLabel)
+            val key = (stableKey ?: title).ifBlank { appLabel }
 
-            if (!lines.isNullOrEmpty()) {
-                for (line in lines) {
-                    val t = line?.toString()?.trim().orEmpty()
-                    if (t.isEmpty()) continue
-                    out += build(pkg, appLabel, key, convTitle, convTitle, false, t, sbn.postTime, now)
+            val candidates = when {
+                !lines.isNullOrEmpty() -> lines.mapNotNull { it?.toString()?.trim()?.takeIf { s -> s.isNotEmpty() } }
+                !text.isNullOrEmpty() -> listOf(text)
+                else -> emptyList()
+            }
+            for (t in candidates) {
+                if (isDeletionPlaceholder(t)) {
+                    deletions += DeletionMark(key, title, sbn.postTime)
+                } else {
+                    messages += message(pkg, appLabel, key, title, title, false, t, sbn.postTime, now)
                 }
-            } else if (!text.isNullOrEmpty()) {
-                out += build(pkg, appLabel, key, convTitle, convTitle, false, text, sbn.postTime, now)
             }
         }
 
-        return out
+        return ExtractResult(messages, deletions)
     }
 
-    private fun build(
+    private fun message(
         pkg: String, appLabel: String, conversationKey: String, conversation: String, sender: String,
         isGroup: Boolean, text: String, time: Long, capturedAt: Long
-    ): CapturedMessage {
+    ): CapturedMessage = CapturedMessage(
         // De-dup on the stable key (+ sender/text/time) so re-deliveries collapse even when the
         // notification's displayed title differs between posts.
-        val id = messageContentId(pkg, conversationKey, sender, text, time)
-        val suspected = deletionMarkers.any { text.lowercase().contains(it) }
-        return CapturedMessage(
-            id = id,
-            packageName = pkg,
-            appLabel = appLabel,
-            conversationKey = conversationKey.ifBlank { conversation.ifBlank { appLabel } },
-            conversation = conversation.ifBlank { appLabel },
-            sender = sender.ifBlank { "Unbekannt" },
-            isGroup = isGroup,
-            text = text,
-            messageTime = time,
-            capturedAt = capturedAt,
-            deletionSuspected = suspected
-        )
-    }
+        id = messageContentId(pkg, conversationKey, sender, text, time),
+        packageName = pkg,
+        appLabel = appLabel,
+        conversationKey = conversationKey,
+        conversation = conversation,
+        sender = sender,
+        isGroup = isGroup,
+        text = text,
+        messageTime = time,
+        capturedAt = capturedAt,
+        deletionSuspected = false // set later via DAO.markDeleted when a placeholder arrives
+    )
 
     private fun labelFor(pkg: String): String = runCatching {
         pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()

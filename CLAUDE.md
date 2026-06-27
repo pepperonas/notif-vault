@@ -35,16 +35,20 @@ The whole app is one pipeline: a system notification → a stored, encrypted row
    notification. Filters by `SettingsStore` (capture-all toggle, else monitored package allowlist), hands
    the `StatusBarNotification` to `MessageExtractor`, and inserts the results. Runs work on a private IO
    `CoroutineScope`. On `onListenerConnected` it snapshots the current shade; on disconnect it calls
-   `requestRebind` because Samsung One UI aggressively kills listeners. Deletion is **never** acted on —
-   the original is already saved.
+   `requestRebind` because Samsung One UI aggressively kills listeners. It applies the extractor's
+   `messages` (insert) and `deletions` (`dao.markDeleted`).
 
-2. **`notif/MessageExtractor`** — converts one notification into 0..N `CapturedMessage`s. Skips
+2. **`notif/MessageExtractor`** — `extract()` returns an **`ExtractResult(messages, deletions)`**. Skips
    `FLAG_GROUP_SUMMARY`. **Prefers `NotificationCompat.MessagingStyle`** (gives per-message sender + real
-   timestamp + bundled back-history); falls back to title/`EXTRA_TEXT_LINES`/`EXTRA_TEXT`. Flags
-   suspected-deletion text via `deletionMarkers`. **Derives a stable `conversationKey`** for grouping —
-   `notification.shortcutId` → `sbn.tag` → display title — because the title (`conversationTitle`) is null
-   for most 1:1 WhatsApp chats and sometimes missing for groups; grouping by title mixed distinct chats and
-   split groups per-sender. The title is display-only.
+   timestamp + bundled back-history); falls back to title/`EXTRA_TEXT_LINES`/`EXTRA_TEXT`. **Derives a stable
+   `conversationKey`** for grouping — `notification.shortcutId` → `sbn.tag` → display title — because the title
+   (`conversationTitle`) is null for most 1:1 WhatsApp chats and sometimes missing for groups; grouping by
+   title mixed distinct chats and split groups per-sender. The title is display-only. **Deletion detection:**
+   when a still-unread message is deleted, WhatsApp re-posts the notification with the text replaced by a
+   placeholder (`notif/Deletion.isDeletionPlaceholder`, unit-tested) while keeping the original sender +
+   timestamp; the extractor emits a `DeletionMark(conversationKey, sender, messageTime)` instead of storing
+   it, so the already-stored original is flagged (`deletionSuspected`). Messages deleted *after* being read
+   produce no notification → undetectable (hard platform limit).
 
 3. **De-duplication is the key invariant.** `CapturedMessage.id` is a SHA-256 of
    `"$pkg|$conversationKey|$sender|$text|$messageTime"` — computed by `messageContentId(...)` in
@@ -59,7 +63,9 @@ The whole app is one pipeline: a system notification → a stored, encrypted row
    with **no registered migration on purpose** — v2 added `conversationKey`, and since the old rows were
    grouped by the unreliable title we took a clean slate. If you bump the schema again and want to keep data,
    add a real `Migration`. `MessageDao` groups/filters by **`conversationKey`** (the overview's bare columns
-   resolve to the `MAX(messageTime)` row → latest title + last message). `SettingsStore` (DataStore) holds the
+   resolve to the `MAX(messageTime)` row → latest title + last message; `SUM(deletionSuspected)` →
+   `deletedCount` per chat). `markDeleted(key, sender, time)` flags a stored original when a deletion
+   placeholder arrives. `SettingsStore` (DataStore) holds the
    monitored-package set, capture-all flag, and biometric-lock flag; `KNOWN_MESSENGERS` is the Settings toggle
    list, `DEFAULT_PACKAGES` the WhatsApp default.
 

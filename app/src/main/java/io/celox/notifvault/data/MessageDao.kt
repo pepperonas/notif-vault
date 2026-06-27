@@ -15,7 +15,8 @@ data class ConversationSummary(
     val isGroup: Boolean,
     val lastText: String,
     val lastTime: Long,
-    val messageCount: Int
+    val messageCount: Int,
+    val deletedCount: Int       // messages in this chat detected as deleted by the sender
 )
 
 @Dao
@@ -30,7 +31,8 @@ interface MessageDao {
     @Query(
         """
         SELECT conversationKey, conversation, packageName, appLabel, isGroup,
-               text AS lastText, MAX(messageTime) AS lastTime, COUNT(*) AS messageCount
+               text AS lastText, MAX(messageTime) AS lastTime, COUNT(*) AS messageCount,
+               SUM(deletionSuspected) AS deletedCount
         FROM messages
         GROUP BY conversationKey, packageName
         ORDER BY lastTime DESC
@@ -72,4 +74,13 @@ interface MessageDao {
 
     @Query("DELETE FROM messages WHERE conversationKey = :conversationKey AND packageName = :pkg")
     suspend fun deleteConversation(conversationKey: String, pkg: String)
+
+    // Flag the stored original that a deletion placeholder refers to (same chat + sender + time).
+    @Query(
+        """
+        UPDATE messages SET deletionSuspected = 1
+        WHERE conversationKey = :conversationKey AND sender = :sender AND messageTime = :messageTime
+        """
+    )
+    suspend fun markDeleted(conversationKey: String, sender: String, messageTime: Long): Int
 }

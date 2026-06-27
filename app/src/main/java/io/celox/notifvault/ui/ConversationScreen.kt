@@ -189,11 +189,11 @@ private fun DaySeparator(label: String) {
 private fun MessageBubble(m: CapturedMessage, showSender: Boolean) {
     val deleted = m.deletionSuspected
     val bubbleColor = if (deleted)
-        MaterialTheme.colorScheme.tertiaryContainer
+        MaterialTheme.colorScheme.errorContainer
     else
         MaterialTheme.colorScheme.surfaceVariant
     val onBubble = if (deleted)
-        MaterialTheme.colorScheme.onTertiaryContainer
+        MaterialTheme.colorScheme.onErrorContainer
     else
         MaterialTheme.colorScheme.onSurfaceVariant
 
@@ -229,7 +229,7 @@ private fun MessageBubble(m: CapturedMessage, showSender: Boolean) {
                             tint = onBubble.copy(alpha = 0.7f)
                         )
                         Text(
-                            "evtl. gelöscht",
+                            "gelöscht",
                             style = MaterialTheme.typography.labelSmall,
                             color = onBubble.copy(alpha = 0.7f),
                             modifier = Modifier.weight(1f),

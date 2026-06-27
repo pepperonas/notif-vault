@@ -36,10 +36,11 @@ class NotificationCaptureService : NotificationListenerService() {
             val monitored = settings.monitoredPackages.first()
             if (!captureAll && notification.packageName !in monitored) return@launch
 
-            val messages = extractor.extract(notification)
-            if (messages.isNotEmpty()) {
-                DatabaseProvider.get(applicationContext).messageDao().insertAll(messages)
-            }
+            val result = extractor.extract(notification)
+            val dao = DatabaseProvider.get(applicationContext).messageDao()
+            if (result.messages.isNotEmpty()) dao.insertAll(result.messages)
+            // A deleted-while-unread message arrived as a placeholder: flag the stored original.
+            for (d in result.deletions) dao.markDeleted(d.conversationKey, d.sender, d.messageTime)
         }
     }
 
