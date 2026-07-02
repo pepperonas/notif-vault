@@ -7,3 +7,23 @@ package io.celox.notifvault.util
  */
 fun escapeLike(query: String): String =
     query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+/**
+ * Case-insensitive, non-overlapping match ranges of [query] (trimmed) within [text].
+ * Uses `indexOf(ignoreCase = true)` (regionMatches-based, length-preserving) — computing
+ * indices on a `lowercase()` copy breaks when case folding changes the string length
+ * (e.g. 'İ' U+0130 lowercases to two code units), shifting highlights or crashing.
+ */
+fun findMatches(text: String, query: String): List<IntRange> {
+    val q = query.trim()
+    if (q.isEmpty()) return emptyList()
+    val out = mutableListOf<IntRange>()
+    var i = 0
+    while (true) {
+        val idx = text.indexOf(q, i, ignoreCase = true)
+        if (idx < 0) break
+        out += idx until idx + q.length
+        i = idx + q.length
+    }
+    return out
+}

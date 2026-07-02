@@ -2,8 +2,10 @@ package io.celox.notifvault.data
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import androidx.sqlite.db.SupportSQLiteDatabase
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import java.security.SecureRandom
 
@@ -31,10 +33,26 @@ object DatabaseProvider {
 
         return Room.databaseBuilder(context, AppDatabase::class.java, "vault.db")
             .openHelperFactory(factory)
-            // No migration registered for 1→2: intentionally start the new, correctly-grouped
-            // schema from a clean slate (old rows were grouped by the unreliable title).
-            .fallbackToDestructiveMigration()
+            .addMigrations(MIGRATION_2_3)
+            // Destructive ONLY from v1 (intentional clean slate: old rows were grouped by the
+            // unreliable title). Every later schema bump needs a real migration — a blanket
+            // fallbackToDestructiveMigration() would silently wipe the whole vault.
+            .fallbackToDestructiveMigrationFrom(1)
             .build()
+    }
+
+    // v3: replace the single-column conversationKey index (and the conversation index, unused
+    // since grouping moved to conversationKey) with the composite index the overview and
+    // per-chat queries actually need. Names/DDL must match app/schemas/…/3.json exactly.
+    private val MIGRATION_2_3 = object : Migration(2, 3) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("DROP INDEX IF EXISTS `index_messages_conversationKey`")
+            db.execSQL("DROP INDEX IF EXISTS `index_messages_conversation`")
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_messages_conversationKey_packageName_messageTime` " +
+                    "ON `messages` (`conversationKey`, `packageName`, `messageTime`)"
+            )
+        }
     }
 
     private fun passphrase(context: Context): ByteArray {

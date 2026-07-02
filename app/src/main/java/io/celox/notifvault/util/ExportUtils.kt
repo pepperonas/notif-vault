@@ -7,9 +7,11 @@ import java.util.Locale
 
 object ExportUtils {
 
-    private val fmt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.GERMANY)
+    // SimpleDateFormat is not thread-safe — create one per export run instead of sharing.
+    private fun dateFmt() = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.GERMANY)
 
     fun toCsv(messages: List<CapturedMessage>): String {
+        val fmt = dateFmt()
         val sb = StringBuilder("Zeit;App;Chat;Absender;Gruppe;Text\n")
         for (m in messages) {
             sb.append(fmt.format(Date(m.messageTime))).append(';')
@@ -23,6 +25,7 @@ object ExportUtils {
     }
 
     fun toJson(messages: List<CapturedMessage>): String {
+        val fmt = dateFmt()
         val sb = StringBuilder("[\n")
         messages.forEachIndexed { i, m ->
             sb.append("  {")
@@ -41,10 +44,22 @@ object ExportUtils {
     }
 
     private fun esc(s: String): String =
-        if (s.contains(';') || s.contains('"') || s.contains('\n'))
-            "\"" + s.replace("\"", "\"\"").replace("\n", " ") + "\""
+        if (s.contains(';') || s.contains('"') || s.contains('\n') || s.contains('\r'))
+            "\"" + s.replace("\"", "\"\"").replace("\r\n", " ")
+                .replace('\n', ' ').replace('\r', ' ') + "\""
         else s
 
-    private fun j(s: String): String =
-        s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "")
+    // JSON string escaping incl. all control characters (< U+0020) — a raw tab or CR in a
+    // message would otherwise produce output that strict parsers reject.
+    private fun j(s: String): String = buildString(s.length) {
+        for (c in s) when {
+            c == '\\' -> append("\\\\")
+            c == '"' -> append("\\\"")
+            c == '\n' -> append("\\n")
+            c == '\r' -> append("\\r")
+            c == '\t' -> append("\\t")
+            c < ' ' -> append("\\u%04x".format(c.code))
+            else -> append(c)
+        }
+    }
 }

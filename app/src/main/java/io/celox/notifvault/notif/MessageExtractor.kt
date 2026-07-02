@@ -90,11 +90,12 @@ class MessageExtractor(private val pm: PackageManager) {
                 else -> emptyList()
             }
             for (t in candidates) {
-                if (isDeletionPlaceholder(t)) {
-                    deletions += DeletionMark(key, title, sbn.postTime)
-                } else {
-                    messages += message(pkg, appLabel, key, title, title, false, t, sbn.postTime, now)
-                }
+                // Deletion detection is effectively MessagingStyle-only: there the placeholder
+                // keeps the original message's timestamp, so the stored row can be matched.
+                // Here we only have the *new* post's time, which never matches a stored
+                // original — so just skip storing the placeholder text.
+                if (isDeletionPlaceholder(t)) continue
+                messages += message(pkg, appLabel, key, title, title, false, t, sbn.postTime, now)
             }
         }
 
@@ -120,7 +121,13 @@ class MessageExtractor(private val pm: PackageManager) {
         deletionSuspected = false // set later via DAO.markDeleted when a placeholder arrives
     )
 
-    private fun labelFor(pkg: String): String = runCatching {
-        pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
-    }.getOrDefault(pkg)
+    // One PackageManager round-trip per package, not per notification. The extractor is only
+    // used from the service's single-consumer queue, so a plain map is safe.
+    private val labelCache = HashMap<String, String>()
+
+    private fun labelFor(pkg: String): String = labelCache.getOrPut(pkg) {
+        runCatching {
+            pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
+        }.getOrDefault(pkg)
+    }
 }

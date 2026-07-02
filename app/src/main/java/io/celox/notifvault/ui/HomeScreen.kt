@@ -28,9 +28,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,6 +47,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.celox.notifvault.data.CapturedMessage
 import io.celox.notifvault.data.ConversationSummary
 import io.celox.notifvault.ui.theme.Motion
+import io.celox.notifvault.util.findMatches
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,7 +59,9 @@ fun HomeScreen(
     val conversations by vm.conversations.collectAsStateWithLifecycle()
     val results by vm.searchResults.collectAsStateWithLifecycle()
     val total by vm.totalCount.collectAsStateWithLifecycle()
-    var query by remember { mutableStateOf("") }
+    // Saveable so rotation keeps the field and the ViewModel query in sync.
+    var query by rememberSaveable { mutableStateOf("") }
+    LaunchedEffect(query) { vm.setQuery(query) }
 
     Scaffold(
         topBar = {
@@ -74,7 +78,7 @@ fun HomeScreen(
         Column(Modifier.padding(pad).fillMaxSize()) {
             OutlinedTextField(
                 value = query,
-                onValueChange = { query = it; vm.setQuery(it) },
+                onValueChange = { query = it },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
                 placeholder = { Text("Nachrichten durchsuchen…") },
                 leadingIcon = { Icon(Icons.Default.Search, null) },
@@ -86,7 +90,9 @@ fun HomeScreen(
                 query.isNotBlank() -> SearchResults(query, results, onOpenConversation)
                 conversations.isEmpty() -> EmptyState(total)
                 else -> LazyColumn(Modifier.fillMaxSize()) {
-                    items(conversations, key = { it.conversationKey + it.packageName }) { c ->
+                    // Space separator keeps the composed key unambiguous (package names
+                    // contain no spaces; bare concatenation could collide).
+                    items(conversations, key = { "${it.conversationKey} ${it.packageName}" }) { c ->
                         // Spring placement so a chat springing to the top on a new message
                         // (and rows above sliding down) reads as physical, not a hard cut.
                         Column(
@@ -288,20 +294,17 @@ private fun EmptyState(total: Int) {
 
 /** Bold + accent-color the matched substring(s) of [query] within [text] (case-insensitive). */
 private fun highlight(text: String, query: String, color: Color): AnnotatedString {
-    val q = query.trim()
-    if (q.isEmpty()) return AnnotatedString(text)
+    val ranges = findMatches(text, query)
+    if (ranges.isEmpty()) return AnnotatedString(text)
     return buildAnnotatedString {
-        val lower = text.lowercase()
-        val needle = q.lowercase()
         var i = 0
-        while (i <= text.length) {
-            val idx = lower.indexOf(needle, i)
-            if (idx < 0) { append(text.substring(i)); break }
-            append(text.substring(i, idx))
+        for (r in ranges) {
+            append(text.substring(i, r.first))
             withStyle(SpanStyle(color = color, fontWeight = FontWeight.Bold)) {
-                append(text.substring(idx, idx + needle.length))
+                append(text.substring(r.first, r.last + 1))
             }
-            i = idx + needle.length
+            i = r.last + 1
         }
+        append(text.substring(i))
     }
 }

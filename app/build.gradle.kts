@@ -22,8 +22,8 @@ android {
         applicationId = "io.celox.notifvault"
         minSdk = 26
         targetSdk = 35
-        versionCode = 8
-        versionName = "1.4.0"
+        versionCode = 9
+        versionName = "1.5.0"
         vectorDrawables { useSupportLibrary = true }
     }
 
@@ -67,6 +67,10 @@ android {
         resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
     }
 }
+
+// Room writes its expected schema JSON here (checked in) — the reference for hand-written
+// migrations: index/table DDL in a Migration must match these definitions exactly.
+ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2024.10.01")

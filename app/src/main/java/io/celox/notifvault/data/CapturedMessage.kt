@@ -18,8 +18,12 @@ import androidx.room.PrimaryKey
  */
 @Entity(
     tableName = "messages",
+    // v3: composite index serves the overview grouping (conversationKey, packageName,
+    // MAX(messageTime)) and the per-chat query; it also covers plain conversationKey
+    // lookups. The old single-column conversationKey and (unused since the key rework)
+    // conversation indexes were dropped in MIGRATION_2_3.
     indices = [
-        Index("conversationKey"), Index("conversation"),
+        Index("conversationKey", "packageName", "messageTime"),
         Index("packageName"), Index("messageTime")
     ]
 )

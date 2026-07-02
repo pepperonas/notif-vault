@@ -43,8 +43,6 @@ import io.celox.notifvault.ui.SettingsScreen
 import io.celox.notifvault.ui.VaultViewModel
 import io.celox.notifvault.ui.theme.NotifVaultTheme
 import io.celox.notifvault.util.PermissionUtils
-import java.net.URLDecoder
-import java.net.URLEncoder
 
 /**
  * Uses FragmentActivity so BiometricPrompt works.
@@ -168,8 +166,8 @@ private fun AppNav(vm: VaultViewModel) {
         composable("chat/{key}/{pkg}") { entry ->
             ConversationScreen(
                 vm = vm,
-                conversationKey = dec(entry.arguments?.getString("key")),
-                pkg = dec(entry.arguments?.getString("pkg")),
+                conversationKey = entry.arguments?.getString("key").orEmpty(),
+                pkg = entry.arguments?.getString("pkg").orEmpty(),
                 onBack = { nav.popBackStack() }
             )
         }
@@ -179,5 +177,7 @@ private fun AppNav(vm: VaultViewModel) {
     }
 }
 
-private fun enc(s: String) = URLEncoder.encode(s, "UTF-8")
-private fun dec(s: String?) = URLDecoder.decode(s ?: "", "UTF-8")
+// Navigation Uri-decodes route arguments itself, so encode exactly once with Uri.encode
+// (percent-encoding; no '+' form encoding) and read the framework-decoded value as-is.
+// A second URLDecoder pass corrupted keys containing '+' and crashed on a bare '%'.
+private fun enc(s: String) = android.net.Uri.encode(s)

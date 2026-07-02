@@ -111,9 +111,9 @@ Reine JVM-Unit-Tests (kein Emulator nötig):
 ./gradlew testDebugUnitTest
 ```
 
-Abgedeckt: Dedup-Schlüssel (`messageContentId`, mit fixem SHA-256-Anker), CSV-/JSON-Export-Escaping
-(`ExportUtils`), Datums-/Zeit- und Identitäts-Helfer (`Format`) sowie das LIKE-Escaping der Suche
-(`SearchUtils`).
+Abgedeckt: Dedup-Schlüssel (`messageContentId`, mit fixem SHA-256-Anker), Löschungs-Platzhalter
+(`Deletion`), CSV-/JSON-Export-Escaping inkl. Steuerzeichen (`ExportUtils`), Datums-/Zeit- und
+Identitäts-Helfer (`Format`) sowie LIKE-Escaping und Such-Highlight-Ranges (`SearchUtils`).
 
 ## Einrichtung auf dem Samsung S24 Ultra (wichtig)
 
@@ -144,8 +144,9 @@ notif/   MessageExtractor – Notification → CapturedMessage(s)
 service/ NotificationCaptureService – der Listener
 ui/      Compose-Screens (Onboarding, Home, Conversation, Settings) + ViewModel,
          Components (Avatar), Format (Datum/Zeit, Farben, Initialen)
-util/    PermissionUtils, ExportUtils, SearchUtils (LIKE-Escaping)
-src/test JUnit-Unit-Tests (MessageId, ExportUtils, Format, SearchUtils)
+util/    PermissionUtils, ExportUtils, SearchUtils (LIKE-Escaping, Highlight-Ranges)
+schemas/ Room-Schema-JSON (Referenz für handgeschriebene Migrationen)
+src/test JUnit-Unit-Tests (MessageId, Deletion, ExportUtils, Format, SearchUtils)
 ```
 
 ## Release erstellen (Maintainer)

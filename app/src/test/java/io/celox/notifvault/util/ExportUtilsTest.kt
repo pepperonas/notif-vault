@@ -67,6 +67,15 @@ class ExportUtilsTest {
         assertEquals(2, csv.count { it == '\n' })
     }
 
+    @Test
+    fun `csv flattens carriage returns too`() {
+        val crlf = ExportUtils.toCsv(listOf(msg("zeile1\r\nzeile2")))
+        assertTrue(crlf.contains("\"zeile1 zeile2\""))
+        assertFalse(crlf.contains("\r"))
+        val bareCr = ExportUtils.toCsv(listOf(msg("a\rb")))
+        assertTrue(bareCr.contains("\"a b\""))
+    }
+
     // ---- JSON ----
 
     @Test
@@ -94,10 +103,19 @@ class ExportUtilsTest {
     }
 
     @Test
-    fun `json escapes newlines and drops carriage returns`() {
+    fun `json escapes newlines and carriage returns`() {
         val json = ExportUtils.toJson(listOf(msg("a\r\nb")))
-        assertTrue(json.contains("a\\nb"))   // \r removed, \n -> \n
+        assertTrue(json.contains("a\\r\\nb"))
         assertFalse(json.contains("\r"))
+    }
+
+    @Test
+    fun `json escapes tabs and other control characters`() {
+        assertTrue(ExportUtils.toJson(listOf(msg("a\tb"))).contains("\"text\":\"a\\tb\""))
+        // U+0001 must not appear raw — strict parsers reject unescaped control chars.
+        val json = ExportUtils.toJson(listOf(msg("a\u0001b")))
+        assertTrue(json.contains("\"text\":\"a\\u0001b\""))
+        assertFalse(json.contains('\u0001'))
     }
 
     @Test

@@ -42,11 +42,14 @@ APK and publishes it as a GitHub Release asset (`kleene-petze-vX.Y.Z.apk`). Veri
 The whole app is one pipeline: a system notification → a stored, encrypted row → Compose UI reads it back.
 
 1. **`service/NotificationCaptureService`** — a `NotificationListenerService` that receives *every* posted
-   notification. Filters by `SettingsStore` (capture-all toggle, else monitored package allowlist), hands
-   the `StatusBarNotification` to `MessageExtractor`, and inserts the results. Runs work on a private IO
-   `CoroutineScope`. On `onListenerConnected` it snapshots the current shade; on disconnect it calls
-   `requestRebind` because Samsung One UI aggressively kills listeners. It applies the extractor's
-   `messages` (insert) and `deletions` (`dao.markDeleted`).
+   notification. Filters by `SettingsStore` (capture-all toggle, else monitored package allowlist; both
+   cached in-memory via `stateIn`, not re-collected per notification), hands the `StatusBarNotification`
+   to `MessageExtractor`, and inserts the results. Work runs through a **single-consumer `Channel` queue**
+   (strictly in post order — a deletion placeholder must never be applied before the insert of the
+   original it flags; parallel per-notification coroutines could interleave at suspension points). On
+   `onListenerConnected` it snapshots the current shade; on disconnect it calls `requestRebind` because
+   Samsung One UI aggressively kills listeners. It applies the extractor's `messages` (insert) and
+   `deletions` (`dao.markDeleted`).
 
 2. **`notif/MessageExtractor`** — `extract()` returns an **`ExtractResult(messages, deletions)`**. Skips
    `FLAG_GROUP_SUMMARY`. **Prefers `NotificationCompat.MessagingStyle`** (gives per-message sender + real
@@ -57,8 +60,11 @@ The whole app is one pipeline: a system notification → a stored, encrypted row
    when a still-unread message is deleted, WhatsApp re-posts the notification with the text replaced by a
    placeholder (`notif/Deletion.isDeletionPlaceholder`, unit-tested) while keeping the original sender +
    timestamp; the extractor emits a `DeletionMark(conversationKey, sender, messageTime)` instead of storing
-   it, so the already-stored original is flagged (`deletionSuspected`). Messages deleted *after* being read
-   produce no notification → undetectable (hard platform limit).
+   it, so the already-stored original is flagged (`deletionSuspected`). This works **only in the
+   MessagingStyle path** (the placeholder keeps the original's timestamp, so the stored row can be
+   matched); in the title/text fallback only the new post's time is known, which never matches — there
+   placeholders are simply skipped. Messages deleted *after* being read produce no notification →
+   undetectable (hard platform limit).
 
 3. **De-duplication is the key invariant.** `CapturedMessage.id` is a SHA-256 of
    `"$pkg|$conversationKey|$sender|$text|$messageTime"` — computed by `messageContentId(...)` in
@@ -67,12 +73,14 @@ The whole app is one pipeline: a system notification → a stored, encrypted row
    re-delivered inside many successive notifications collapses to exactly one row. Don't change the hash
    inputs or conflict strategy — it silently re-duplicates the vault.
 
-4. **`data/`** — Room (`AppDatabase` **v2**, single `messages` table) over **SQLCipher**. `DatabaseProvider`
+4. **`data/`** — Room (`AppDatabase` **v3**, single `messages` table) over **SQLCipher**. `DatabaseProvider`
    is a singleton that loads the native `sqlcipher` lib, builds the DB with a 32-byte random passphrase stored
-   in `EncryptedSharedPreferences` (AES-256-GCM, Android Keystore). Uses `fallbackToDestructiveMigration()`
-   with **no registered migration on purpose** — v2 added `conversationKey`, and since the old rows were
-   grouped by the unreliable title we took a clean slate. If you bump the schema again and want to keep data,
-   add a real `Migration`. `MessageDao` groups/filters by **`conversationKey`** (the overview's bare columns
+   in `EncryptedSharedPreferences` (AES-256-GCM, Android Keystore). **Destructive migration only from v1**
+   (`fallbackToDestructiveMigrationFrom(1)` — intentional clean slate, old rows were grouped by the
+   unreliable title); every later bump needs a real `Migration` (v2→3: `MIGRATION_2_3` swaps the index set
+   for a composite `conversationKey+packageName+messageTime`). `exportSchema = true` writes the expected
+   schema JSON to `app/schemas/` — hand-written migration DDL must match it exactly (verify index names
+   there). `MessageDao` groups/filters by **`conversationKey`** (the overview's bare columns
    resolve to the `MAX(messageTime)` row → latest title + last message; `SUM(deletionSuspected)` →
    `deletedCount` per chat). `markDeleted(key, sender, time)` flags a stored original when a deletion
    placeholder arrives. `SettingsStore` (DataStore) holds the
@@ -81,8 +89,10 @@ The whole app is one pipeline: a system notification → a stored, encrypted row
 
 5. **`ui/`** — Compose. `MainActivity` is a **`FragmentActivity`** (required by `BiometricPrompt`); it gates
    the app behind biometric/device-credential unlock when enabled (and **re-locks on `ON_STOP`**), then a
-   `NavHost` routes onboarding → home → chat → settings. Nav args are the `URLEncoder`-escaped
-   **`conversationKey` + package** (not the title; the chat screen derives the title from its latest message).
+   `NavHost` routes onboarding → home → chat → settings. Nav args are the **`conversationKey` + package**
+   (not the title; the chat screen derives the title from its latest message), encoded **exactly once**
+   with `Uri.encode` — Navigation Uri-decodes route args itself, so there is deliberately no manual decode
+   (a second `URLDecoder` pass corrupted keys containing `+` and crashed on `%`).
    `ConversationScreen` renders a chat archive (date separators, sender-run grouping, per-sender colors via
    `Format.identityColor`); `HomeScreen` shows colored `Avatar`s + search with match highlighting; destructive
    actions (delete chat / clear all) require confirmation dialogs. `VaultViewModel` (`AndroidViewModel`) owns
@@ -96,10 +106,14 @@ The whole app is one pipeline: a system notification → a stored, encrypted row
    `Format.kt` (date/time, `identityColor`, `initials`). Theme in `ui/theme/`.
 
 6. **`util/`** — `PermissionUtils` (notification-access check via `enabled_notification_listeners`, battery-
-   optimization exemption), `ExportUtils` (hand-rolled CSV/JSON serialization), and `SearchUtils.escapeLike`
-   (escapes LIKE `%`/`_`, paired with `ESCAPE '\'` in `MessageDao.search`; unit-tested).
+   optimization exemption), `ExportUtils` (hand-rolled CSV/JSON serialization incl. control-char escaping;
+   serialization runs inside `Dispatchers.IO` in `SettingsScreen.export`), and `SearchUtils`: `escapeLike`
+   (escapes LIKE `%`/`_`, paired with `ESCAPE '\'` in `MessageDao.search`) + `findMatches` (case-insensitive
+   highlight ranges via `indexOf(ignoreCase)` — never index into a `lowercase()` copy, case folding can
+   change string length). Both unit-tested.
 
-`NotifVaultApp` (Application) warms up `DatabaseProvider` at startup so the listener can write immediately.
+`NotifVaultApp` (Application) warms up `DatabaseProvider` at startup (on a background thread — Keystore
+work would delay app start) so the listener can write immediately.
 
 ## Things to keep in mind
 

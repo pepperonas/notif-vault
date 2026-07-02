@@ -185,12 +185,13 @@ private suspend fun export(
     vm: VaultViewModel,
     csv: Boolean
 ) {
-    val all = vm.exportAll()
-    val content = if (csv) ExportUtils.toCsv(all) else ExportUtils.toJson(all)
-    val ext = if (csv) "csv" else "json"
-    // Write the file off the main thread, then launch the chooser back on the main thread
-    // (starting an Activity from a background thread is unreliable on some OEMs).
+    // Serialize AND write off the main thread (building the export string can be several MB),
+    // then launch the chooser back on the main thread (starting an Activity from a background
+    // thread is unreliable on some OEMs).
     val uri = withContext(Dispatchers.IO) {
+        val all = vm.exportAll()
+        val content = if (csv) ExportUtils.toCsv(all) else ExportUtils.toJson(all)
+        val ext = if (csv) "csv" else "json"
         val dir = File(context.cacheDir, "exports").apply { mkdirs() }
         val file = File(dir, "kleene-petze_export.$ext")
         file.writeText(content)
